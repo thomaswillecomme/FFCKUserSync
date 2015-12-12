@@ -11,7 +11,45 @@ require_once( 'database.php' );
  */
 require_once ('sync.php');
 
+
+/**
+ * Return current editing user_id
+ *
+ * @return int
+ * @author Vadimk
+ */
+function get_user_id() {
+
+    $get_user_id = empty( $_GET['user_id'] ) ? null : $_GET['user_id'];
+
+    if ( ! isset( $get_user_id ) ) {
+        $get_user_id = empty( $_POST['user_id'] ) ? null : $_POST['user_id'];
+    }
+
+    if ( ! isset( $get_user_id ) ) {
+        global $current_user;
+        get_currentuserinfo();
+        $get_user_id = $current_user->ID;
+    }
+
+    return $get_user_id;
+}
+
 class ffck_users_sync{
+    
+    static function user_info(){
+        $db = new ffck_users_sync_db();
+        $meta_data = $db->find_wordpress_user(get_user_id());
+        if($meta_data != NULL){
+            echo '<h3>FFCK informations</h3>
+                <table class="form-table">';
+            foreach($meta_data as $key => $value){
+                echo '<tr><th>'.$key.'</th><td>'.$value.'</td></tr>';
+            }
+            echo '</table>';
+        } 
+    }
+    
     static function activate(){
         $db = new ffck_users_sync_db();
         $db->create();
@@ -117,6 +155,9 @@ class ffck_users_sync{
 
 register_activation_hook( __FILE__, array('ffck_users_sync','activate') );
 register_deactivation_hook( __FILE__, array('ffck_users_sync','deactivate') );
+
+add_action( 'show_user_profile', array('ffck_users_sync','user_info') );
+
 
 if ( is_admin() ){ // admin actions
     add_action( 'admin_menu', array('ffck_users_sync','settings_menu') );

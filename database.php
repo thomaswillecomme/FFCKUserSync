@@ -67,6 +67,11 @@ class ffck_users_sync_db{
         return NULL;
     }
     
+    function find_wordpress_user($user_id){
+        global $wpdb;
+        return $wpdb->get_row("SELECT * FROM $this->table_name WHERE wordpress_user=$user_id", ARRAY_A);
+    }
+    
     
     function get_old_members($season){
         global $wpdb;
