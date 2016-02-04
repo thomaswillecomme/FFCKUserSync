@@ -34,7 +34,7 @@ class ffck_users_sync_db{
           ."competition_certificate date,"
           ."season mediumint(4) NOT NULL,"
           ."PRIMARY KEY  (licence_id),"
-          ."FOREIGN KEY  (wordpress_user) REFERENCES wp_users(ID)"
+          ."FOREIGN KEY  (wordpress_user) REFERENCES wp_users(ID) ON DELETE CASCADE"
         .") $charset_collate;";
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
         dbDelta( $sql );

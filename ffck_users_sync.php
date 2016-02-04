@@ -53,10 +53,11 @@ class ffck_users_sync{
     static function activate(){
         $db = new ffck_users_sync_db();
         $db->create();
+        wp_schedule_event(time(), 'daily', 'ffck_daily_sync');
     }
 
     static function deactivate(){
-
+        wp_clear_scheduled_hook('ffck_daily_sync');
     }
 
     static function register_settings() { // whitelist options
@@ -144,6 +145,7 @@ class ffck_users_sync{
             <th scope="row">Season (ie. 2015)</th>
             <td><input type="text" name="season" value="<?php echo esc_attr( get_option('season') ); ?>" /></td>
             </tr>
+            
 
         </table>    
         <?php     submit_button(); ?>
@@ -156,8 +158,8 @@ class ffck_users_sync{
 register_activation_hook( __FILE__, array('ffck_users_sync','activate') );
 register_deactivation_hook( __FILE__, array('ffck_users_sync','deactivate') );
 
-add_action( 'show_user_profile', array('ffck_users_sync','user_info') );
-
+add_action( 'edit_user_profile', array('ffck_users_sync','user_info') );
+add_action('ffck_daily_sync', 'ffck_sync');
 
 if ( is_admin() ){ // admin actions
     add_action( 'admin_menu', array('ffck_users_sync','settings_menu') );

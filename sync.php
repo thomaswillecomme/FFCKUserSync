@@ -1,6 +1,8 @@
 <?php
 
 require_once ('database.php');
+require_once ('actions.php');
+
 
 
 class ffck_connector{
@@ -10,11 +12,13 @@ class ffck_connector{
     var $cookie_file;
     var $session;
     
+    //login : a string containing the login of the user to perform all queries. It is actualy the licence id. The user needs access to member list.
+    //password : the password of the user
     function __construct($login, $password){
         $this->login = $login;
         $this->password = $password;
         $this->cookie_file = dirname(__FILE__).'/cookie.txt';
-        unlink($this->cookie_file);
+        unlink($this->cookie_file); // remove previous cookies
     }
     
    
@@ -253,13 +257,14 @@ function ffck_sync(){
             $wp_user = $db->find_match($member_data);
             if($wp_user != NULL){
                 echo 'matched with '.$wp_user['display_name'].PHP_EOL;
-                ffck_on_new_match($member_data);
+                ffck_on_new_match($member_data,$wp_user);
                 continue;
             }
         }
         
         echo 'no match found'.PHP_EOL; 
         ffck_on_no_match($member_data);
+        $db->update_member($member_data);
     }
 
     echo 'done fetching users informations'.PHP_EOL;
@@ -274,29 +279,3 @@ function ffck_sync(){
     echo 'done looking for members which no longer has their licence'.PHP_EOL;
 }
 
-function ffck_on_no_match($member_data){
-    //do some stufs for unmatched members
-    
-    
-    //TODO create the user and send him an email
-    //TODO grant user author privileges
-}
-
-function ffck_on_new_match($member_data){
-    //do some stufs for newly matched users
-    
-    //TODO grant user author privileges if below
-}
-
-function ffck_on_existing_match($member_data){
-    //do some stufs for matched licencee
-    
-    //TODO grant user author privileges if below
-}
-
-
-function ffck_on_revocated_match($member_data){
-    //do some stufs for old members which have not an up to date licence
-    
-    //TODO ungrant user member privileges to subscriber
-}
