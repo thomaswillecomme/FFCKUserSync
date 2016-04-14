@@ -1,6 +1,5 @@
 <?php
 
-require_once ('database.php');
 require_once ('actions.php');
 
 
@@ -117,10 +116,10 @@ class ffck_connector{
 
     }
     
-    function get_member_data($licence_id){
+    function get_member_data($person_id){
         //curl 'https://ffck-goal.multimediabs.com/personnes/gettabpanel?tabId=Coordonnees_Personne&personne.id=293774' -H 'Host: ffck-goal.multimediabs.com' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:42.0) Gecko/20100101 Firefox/42.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'X-Requested-With: XMLHttpRequest' -H 'Referer: https://ffck-goal.multimediabs.com/personnes/show?idPersonne=293774&selectedTab=Coordonnees_Personne' -H 'Cookie: LB=was03; FFCK_SESSION=f49c99cf5055331b3ce598ba2f641dfb27adf3e3-%00idStructureTravail%3A1836%00%00___ID%3Aedfebc2a-e5ef-4f31-99d7-60503edb428f%00%00username%3A260864%00%00idSaisonEnCours%3A2015%00%00userId%3A269806%00%00___AT%3Af7736c82c5258db5ca51974b26e43817c335d937%00%00idSaisonLicence%3A2015%00; FFCK_FLASH=%00previousUrl%3A%2Flicences%2FlisterLicencies%3FidStructure%3D1836%00%00url%3A%2Fpersonnes%2Fshow%3FidPersonne%3D293774%26selectedTab%3DCoordonnees_Personne%00' -H 'DNT: 1' -H 'Connection: keep-alive'
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://ffck-goal.multimediabs.com/personnes/gettabpanel?tabId=Coordonnees_Personne&personne.id='.$licence_id);
+        curl_setopt($ch, CURLOPT_URL, 'https://ffck-goal.multimediabs.com/personnes/gettabpanel?tabId=Coordonnees_Personne&personne.id='.$person_id);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Host: ffck-goal.multimediabs.com', 'Accept: application/json; q=0.01'));
         //curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
         curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
@@ -130,7 +129,7 @@ class ffck_connector{
         $result = curl_exec($ch);
         
         $member = array();
-        $member['licence_id']=$licence_id;
+        $member['licence_id']=$this->extract_id($result,'identite.codeAdherent');
         $member['email']=$this->extract($result,'~<span id="email"><a href="mailto:.*?">(?P<email>.*?)</a></span>~', 'email');
         $member['firstname']=$this->extract_id($result,'identite.prenom');
         $member['lastname']=$this->extract_id($result,'identite.nom');
@@ -206,7 +205,9 @@ class ffck_connector{
         
 }
 
-function ffck_sync(){
+function ffck_sync($season = NULL){
+    if($season == NULL)
+        $season = (int)date("Y");
     //FIXME unsecure
     $connector = new ffck_connector($_POST['user'],$_POST['password']);
 
@@ -218,7 +219,7 @@ function ffck_sync(){
    
     //FIXME unsecure
     echo 'fetching users list...';
-    $members = $connector->get_members($_POST['season']);
+    $members = $connector->get_members($season);
     if($members == FALSE){
         return;
     }
@@ -227,55 +228,14 @@ function ffck_sync(){
     echo 'fetching users informations...'.PHP_EOL;
     foreach($members as $member){
         //get data for this member
-        $member_data = $connector->get_member_data($member[0]);
-
-        //add season value
-        $member_data['season']=$_POST['season'];
-        
-        //feed the member to the database
-        $db = new ffck_users_sync_db();
-        if($db->get_member($member_data['licence_id']) != NULL){
-            //member already exists
-            $db->update_member($member_data);
-            echo 'updated '.$member_data['firstname'].' '.$member_data['lastname'].' ';
-            $member_data = $db->get_member($member_data['licence_id']);
-        }else{
-            $db->add_member($member_data);
-            echo 'added  '.$member_data['firstname'].' '.$member_data['lastname'].' ';
-        }
-        
-        //the member is already associated with a wordpress user
-        if($member_data['wordpress_user'] != NULL){
-            echo 'already matched'.PHP_EOL;
-            ffck_on_existing_match($member_data);
-            continue;
-        }
-            
-        
-        //try to match using email
-        if($member_data['email'] != NULL){
-            $wp_user = $db->find_match($member_data);
-            if($wp_user != NULL){
-                echo 'matched with '.$wp_user['display_name'].PHP_EOL;
-                ffck_on_new_match($member_data,$wp_user);
-                continue;
-            }
-        }
-        
-        echo 'no match found'.PHP_EOL; 
-        ffck_on_no_match($member_data);
-        $db->update_member($member_data);
+        $member_data = $connector->get_member_data(ffck_connector::extract($member[9],'~style=\'display:none\'>(?P<id>.*?)</span>~', 'id'));
+        $member_data['season'] = $season;
+        //check against wordpress user database
+        ffck_check_user($member_data);
     }
 
     echo 'done fetching users informations'.PHP_EOL;
     
-    echo 'looking for members which no longer has their licence...'.PHP_EOL;
-    
-    foreach($db->get_old_members($_POST['season']) as $member){
-        echo $member['firstname'].' '.$member['lastname'].PHP_EOL;
-        ffck_on_revocated_match($member);
-    }   
-    
-    echo 'done looking for members which no longer has their licence'.PHP_EOL;
+
 }
 
