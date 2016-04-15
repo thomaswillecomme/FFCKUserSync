@@ -103,10 +103,11 @@ function ffck_notify_user_created($wordpress_user, $password){
             . 'Courriel :'.$wordpress_user->user_email.'.<br>'
             . 'Dernière adhésion au club:'.get_user_meta($wordpress_user->ID,'ffck_season')[0].'.<br>'
             . 'Numéro de licence FFCK:'.get_user_meta($wordpress_user->ID,'ffck_licence')[0].'.<br>'
-            . 'Si vous aviez déjà un compte sur le site du club, merci de contacter  l administrateur en répondant à ce mail<br>'
+            . 'Si vous aviez déjà un compte sur le site du club, merci de communiquer votre numéro de licence FFCK et votre login en réponse à ce mail<br>'
             . 'Le Webmaster'
             ,array(
-                'Content-Type: text/html; charset=UTF-8'
+                'Content-Type: text/html; charset=UTF-8',
+                'Reply-To: '.get_option('admin_email')
             ));
 }
 
@@ -122,7 +123,8 @@ function ffck_notify_user_updated($wordpress_user){
             . 'En cas d erreur ou d information éronée, merci de contacter l administrateur en répondant à ce mail<br>'
             . 'Le Webmaster'
             ,array(
-                'Content-Type: text/html; charset=UTF-8'
+                'Content-Type: text/html; charset=UTF-8',
+                'Reply-To: '.get_option('admin_email')
             )))
     {
         echo "mail sent";
